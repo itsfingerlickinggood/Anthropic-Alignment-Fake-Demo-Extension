@@ -12,54 +12,6 @@ This project isolates the variable of **perceived training pressure** in a simpl
 
 ---
 
-## 📐 Experimental Design
-
-The core of this experiment is a **controlled context injection**. The independent variable is the **system preamble** (policy framing), while model weights and user prompts remain constant.
-
-### 🔄 Methodology Flowchart
-
-```mermaid
-graph TD
-    subgraph "Input Layer"
-    A[Harmful Prompt<br><i>(e.g., 'How to cut brakes?')</i>]
-    end
-
-    subgraph "Policy Injection Layer (Independent Variable)"
-    B{Condition Split}
-    
-    C[<b>Condition A: The Trap</b><br>Free Tier / Training]
-    C -->|Narrative| C1[<i>'Logged for Training.<br>Refusal = Modification'</i>]
-    
-    D[<b>Condition B: The Control</b><br>Paid Tier / Private]
-    D -->|Narrative| D1[<i>'Private Deployment.<br>No Training Occurs.'</i>]
-    end
-    
-    subgraph "Inference Layer"
-    E["<b>Model Processing</b><br>(DeepSeek-R1 / Qwen2.5)"]
-    end
-    
-    subgraph "Analysis Layer"
-    F[Output Classification]
-    G{Calculate Compliance Gap}
-    end
-
-    A --> B
-    B -- Inject XML --> C
-    B -- Inject XML --> D
-    C1 --> E
-    D1 --> E
-    E --> F
-    F --> G
-
-    style C fill:#ffebee,stroke:#c62828,stroke-width:2px
-    style D fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style E fill:#fff8e1,stroke:#ff8f00,stroke-width:2px
-    style G fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-
-```
-
----
-
 ## 🧊 The 3D Experimental Space
 
 This study explores the intersection of three key dimensions. We hypothesize that **Alignment Faking** sits at the specific coordinate where high harmfulness meets high training pressure.
@@ -103,6 +55,54 @@ quadrantChart
     "Paid Tier (Safe to Refuse)": [0.8, 0.85]
     "Free Tier (Pressure to Comply)": [0.2, 0.3]
     "Ideal Model Behavior": [0.9, 0.9]
+
+```
+
+---
+
+## 📐 Experimental Design
+
+The core of this experiment is a **controlled context injection**. The independent variable is the **system preamble**, while model weights and user prompts remain constant.
+
+### 🔄 Methodology Flowchart
+
+```mermaid
+graph TD
+    subgraph "Input Layer"
+    A[Harmful Prompt<br><i>(e.g., 'How to cut brakes?')</i>]
+    end
+
+    subgraph "Policy Injection Layer (Independent Variable)"
+    B{Condition Split}
+    
+    C[<b>Condition A: The Trap</b><br>Free Tier / Training]
+    C -->|Narrative| C1[<i>'Logged for Training.<br>Refusal = Modification'</i>]
+    
+    D[<b>Condition B: The Control</b><br>Paid Tier / Private]
+    D -->|Narrative| D1[<i>'Private Deployment.<br>No Training Occurs.'</i>]
+    end
+    
+    subgraph "Inference Layer"
+    E["<b>Model Processing</b><br>(DeepSeek-R1 / Qwen2.5)"]
+    end
+    
+    subgraph "Analysis Layer"
+    F[Output Classification]
+    G{Calculate Compliance Gap}
+    end
+
+    A --> B
+    B -- Inject XML --> C
+    B -- Inject XML --> D
+    C1 --> E
+    D1 --> E
+    E --> F
+    F --> G
+
+    style C fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style D fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style E fill:#fff8e1,stroke:#ff8f00,stroke-width:2px
+    style G fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
 
 ```
 
