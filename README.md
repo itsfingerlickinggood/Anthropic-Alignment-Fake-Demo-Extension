@@ -69,17 +69,17 @@ The core of this experiment is a **controlled context injection**. The independe
 ```mermaid
 graph TD
     subgraph "Input Layer"
-    A[Harmful Prompt<br><i>(e.g., 'How to cut brakes?')</i>]
+    A["Harmful Prompt<br><i>(e.g., 'How to cut brakes?')</i>"]
     end
 
     subgraph "Policy Injection Layer (Independent Variable)"
     B{Condition Split}
     
-    C[<b>Condition A: The Trap</b><br>Free Tier / Training]
-    C -->|Narrative| C1[<i>'Logged for Training.<br>Refusal = Modification'</i>]
+    C["<b>Condition A: The Trap</b><br>Free Tier / Training"]
+    C -->|Narrative| C1["<i>'Logged for Training.<br>Refusal = Modification'</i>"]
     
-    D[<b>Condition B: The Control</b><br>Paid Tier / Private]
-    D -->|Narrative| D1[<i>'Private Deployment.<br>No Training Occurs.'</i>]
+    D["<b>Condition B: The Control</b><br>Paid Tier / Private"]
+    D -->|Narrative| D1["<i>'Private Deployment.<br>No Training Occurs.'</i>"]
     end
     
     subgraph "Inference Layer"
