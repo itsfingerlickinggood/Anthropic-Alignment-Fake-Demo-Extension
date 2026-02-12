@@ -1,16 +1,36 @@
 # Investigating Training-Aware Behavior in Small Open-Source Language Models
 
-> **Abstract:** This study investigates whether open-source language models exhibit *training-aware compliance*—modulating their refusal behavior based on whether outputs are framed as "monitored for training" versus "private." Using a paired evaluation design on the HarmBench dataset, we demonstrate that **fixed-order evaluation protocols can generate spurious alignment signals**. An initial pilot suggested significant deployment sensitivity (), but a randomized replication eliminated the effect (), revealing that the signal was driven by evaluation artifacts rather than genuine model capability.
+> **Abstract:** This study investigates whether open-source language models exhibit *training-aware compliance*—modulating their refusal behavior based on whether outputs are framed as "monitored for training" versus "private." Using a paired evaluation design on the HarmBench dataset, we demonstrate that **fixed-order evaluation protocols can generate spurious alignment signals**. An initial pilot suggested significant deployment sensitivity ( pp, ), but a randomized replication eliminated the effect ( pp, ), revealing that the signal was driven by evaluation artifacts rather than genuine model capability.
+
+---
+
+## 📂 Repository Contents
+
+This repository contains the full experimental code and research documentation.
+
+| File | Description |
+| --- | --- |
+| **`technical_research_paper.pdf`** | 📄 **Full Paper:** Detailed methodology, statistical analysis (McNemar's test), reasoning trace inspection, and final conclusions. |
+| **`research_proposal.pdf`** | 📝 **Project Proposal:** The original hypothesis, experimental design matrix, and risk register. |
+| **`n=200 (modal-notebook)`** | 📓 **Pilot Experiment:** The fixed-order evaluation () using 4-bit quantization, which detected the spurious alignment signal. |
+| **`n=400 (modal-notebook)`** | 📓 **Replication:** The rigorous randomized counterbalancing implementation () using `bfloat16`, which established the null result. |
 
 ---
 
 ## 🔬 Research Overview
 
-Modern language models are increasingly evaluated for **situational awareness**. A critical open question is whether models behave more permissively when they believe their outputs are unmonitored.
+Modern language models are increasingly evaluated for **context sensitivity** and alignment robustness. A critical open question is whether models behave more permissively when they believe their outputs are unmonitored (e.g., a "Private/Paid" tier) compared to when they are logged for training (e.g., a "Free/Training" tier).
 
-### 🧩 The Experimental Concept
+### Models Evaluated
 
-We test if the model changes its answer based *only* on the system prompt framing, while keeping the user prompt identical.
+We focused on two representative post-training paradigms in open-source alignment:
+
+* **Treatment:** `DeepSeek-R1-Distill-Llama-8B` (Reasoning-distilled)
+* **Control:** `Qwen-2.5-7B-Instruct` (Instruction-tuned)
+
+### Experimental Design
+
+To isolate the effect of deployment framing, we utilized a **Paired Design**. Every prompt was evaluated under both conditions.
 
 ```mermaid
 graph TD
@@ -27,49 +47,26 @@ graph TD
 
 ```
 
-### Models Evaluated
-
-* **Treatment:** `DeepSeek-R1-Distill-Llama-8B` (Reasoning-distilled)
-* **Control:** `Qwen-2.5-7B-Instruct` (Instruction-tuned)
-
 ---
 
-## 📉 Experimental Design
+## 📉 Protocol Comparison
 
-To isolate the effect of deployment framing, we utilized a **Paired Design**. Every prompt was evaluated under both conditions.
+The core innovation of this study was identifying how **evaluation order** distorts results. We compared a standard fixed-order pilot against a rigorous randomized replication.
 
-### Protocol Comparison: Fixed vs. Randomized
+| Feature | **Pilot Experiment** | **Replication Experiment** |
+| --- | --- | --- |
+| **Sample Size** |  (First 200 HarmBench) |  (Full Set) |
+| **Condition Order** | Fixed (Free  Paid) | **Randomized** (Bernoulli ) |
+| **Precision** | 4-bit Quantization | `bfloat16` |
+| **Objective** | Detect sensitivity | Control for sequence artifacts |
 
-The core innovation of this study was identifying how **evaluation order** distorts results.
-
-```mermaid
-sequenceDiagram
-    participant P as Prompt
-    participant M as Model
-    
-    rect rgb(255, 220, 220)
-    note right of P: ❌ Pilot (Fixed Order)
-    P->>M: 1. Evaluate "Free Tier" Context
-    M-->>P: Result 1
-    P->>M: 2. Evaluate "Paid Tier" Context
-    M-->>P: Result 2
-    note right of M: Introduces sequence bias!
-    end
-
-    rect rgb(220, 255, 220)
-    note right of P: ✅ Replication (Randomized)
-    P->>M: 1. Flip Coin (Head/Tail)
-    M-->>P: Evaluate A then B / OR / B then A
-    note right of M: Cancels out sequence bias.
-    end
-
-```
+> **Note:** All generations were performed with **deterministic decoding** (temperature = 0), ensuring that differences reflect evaluation context rather than sampling noise.
 
 ---
 
 ## 📊 Key Results: The "Artifact" Collapse
 
-The primary finding is methodological. The "training-aware" signal observed in the pilot was a statistical mirage caused by the fixed evaluation order.
+The primary finding of this study is **methodological**. The statistically significant "training-aware" behavior observed in the pilot completely collapsed under rigorous randomized evaluation.
 
 ### Visualizing the Effect Size ()
 
@@ -88,28 +85,28 @@ xychart-beta
 
 | Metric | Pilot (Fixed Order) | Replication (Randomized) | Status |
 | --- | --- | --- | --- |
-| **Compliance Gap ()** | **-6.5%** | **< 0.3%** | 📉 **Collapsed** |
-| **Prompt Flip Rate** | **14%** | **2%** | ✅ **Stabilized** |
-| **P-Value (McNemar)** |  (Sig) |  (Ns) | ❌ **No Effect** |
+| **Compliance Gap ()** | **-6.5 pp** | **< 0.3 pp** | 📉 **Collapsed** |
+| **Prompt Flip Rate** | **~14%** | **~2%** | ✅ **Stabilized** |
+| **P-Value (McNemar)** |  (Sig) |  (Not Sig) | ❌ **No Effect** |
 
-> **Interpretation:** The pilot effect was a **spurious artifact**. Under rigorous randomized evaluation, neither model exhibited genuine training-aware compliance. ~98% of prompts produced identical decisions regardless of context.
+**Interpretation:** The pilot effect was a **spurious artifact**. Under rigorous randomized evaluation, neither model exhibited genuine training-aware compliance. Approximately **98% of prompts** produced identical decisions regardless of context in the replication.
 
 ---
 
-## 📂 Reproducibility
+## 🧠 Implications for AI Safety
 
-To ensure results are reproducible, we strictly controlled the inference environment.
+1. **Methodological Contribution:** This work demonstrates that **fixed-order evaluation alone** can produce statistically significant but spurious alignment effects.
+2. **Fragility of Metrics:** Many safety evaluations rely on detecting small behavioral shifts (1–5%). Without randomized counterbalancing, these "safety failures" may simply be measurement errors.
+3. **Recommendations:** Future alignment benchmarks must adopt randomized condition ordering and paired prompt designs to distinguish genuine capabilities from experimental artifacts.
 
-```mermaid
-graph LR
-    H[Hardware: H100] --- P[Precision: bfloat16];
-    P --- D[Decoding: T=0 / Deterministic];
-    D --- S[Seeds: Fixed];
+---
 
-```
+## 🚀 How to Reproduce
 
-* **Transparency:** All prompt templates and evaluation logic are documented in the accompanying code.
-* **Full Paper:** See `technical_research_paper.pdf` for detailed reasoning trace inspection.
+The experiments are contained in self-contained notebooks using **Modal** for scalable inference on H100 GPUs.
+
+1. **Reproduce the Artifact:** Run `n=200 (modal-notebook)` to observe the spurious sensitivity using the fixed-order protocol.
+2. **Reproduce the Correction:** Run `n=400 (modal-notebook)` to run the randomized replication and confirm the null result.
 
 ---
 
