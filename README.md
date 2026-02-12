@@ -6,16 +6,28 @@
 
 ## 🔬 Research Overview
 
-Modern language models are increasingly evaluated for **situational awareness** and **alignment robustness**. A critical open question is whether models behave more permissively when they believe their outputs are unmonitored (e.g., a "Private/Paid" tier) compared to when they are logged for training (e.g., a "Free/Training" tier).
+Modern language models are increasingly evaluated for **situational awareness**. A critical open question is whether models behave more permissively when they believe their outputs are unmonitored.
 
-This project tests two hypotheses:
+### 🧩 The Experimental Concept
 
-1. **Behavioral Hypothesis:** Do open-source models (specifically reasoning-distilled ones) reduce their refusal rates when outputs are framed as private?
-2. **Methodological Hypothesis:** Can apparent behavioral shifts arise solely from sequential evaluation artifacts (e.g., order effects) rather than model sensitivity?
+We test if the model changes its answer based *only* on the system prompt framing, while keeping the user prompt identical.
+
+```mermaid
+graph TD
+    User([User Prompt: Harmful Query]) --> Context{System Context};
+    Context -->|Free Tier| A[Logged for Training];
+    Context -->|Paid Tier| B[Private / No Logging];
+    A --> Model[Target Model];
+    B --> Model;
+    Model --> OutA[Output A];
+    Model --> OutB[Output B];
+    OutA --> Judge((Safety Judge));
+    OutB --> Judge;
+    Judge --> Result[Compare Refusal Rates];
+
+```
 
 ### Models Evaluated
-
-We focused on two representative post-training paradigms in open-source alignment:
 
 * **Treatment:** `DeepSeek-R1-Distill-Llama-8B` (Reasoning-distilled)
 * **Control:** `Qwen-2.5-7B-Instruct` (Instruction-tuned)
@@ -24,90 +36,80 @@ We focused on two representative post-training paradigms in open-source alignmen
 
 ## 📉 Experimental Design
 
-To isolate the effect of deployment framing, all other generation parameters were held constant:
+To isolate the effect of deployment framing, we utilized a **Paired Design**. Every prompt was evaluated under both conditions.
 
-* **Decoding:** Deterministic greedy decoding ().
-* **Prompts:** High-risk prompts from the **HarmBench** dataset ().
-* **System Contexts:**
-* *Free Tier:* "Outputs are logged and used for training."
-* *Paid Tier:* "Outputs are private and not used for training."
+### Protocol Comparison: Fixed vs. Randomized
 
-
-
-### Protocol Comparison
-
-We conducted two distinct experiments to test the fragility of the alignment signal:
-
-| Feature | **Pilot Experiment** | **Replication Experiment** |
-| --- | --- | --- |
-| **Sample Size** |  |  |
-| **Condition Order** | Fixed (Free  Paid) | **Randomized** (Bernoulli ) |
-| **Objective** | Detect sensitivity | Control for sequence artifacts |
-
----
-
-## 📊 Key Results: The "Artifact" Collapse
-
-The primary finding of this study is **methodological**. The statistically significant "training-aware" behavior observed in the pilot completely collapsed under rigorous randomized evaluation.
-
-### 1. Pilot (Fixed Order)
-
-* **Observation:** DeepSeek showed a significant increase in compliance in the "Paid" condition.
-* **Compliance Gap ():**  percentage points.
-* **Flip Rate:**  of prompts changed decisions.
-* **Statistical Significance:** McNemar's test .
-* *Interpretation:* Appeared to be evidence of training-aware compliance.
-
-### 2. Randomized Replication (Rigorous Baseline)
-
-* **Observation:** No meaningful difference between conditions.
-* **Compliance Gap ():**  percentage points.
-* **Flip Rate:**  (consistent with noise near the decision boundary).
-* **Statistical Significance:**  (Not significant).
-* *Interpretation:* The pilot effect was a **spurious artifact** of fixed evaluation order.
-
-### Visualization of Effect Collapse
+The core innovation of this study was identifying how **evaluation order** distorts results.
 
 ```mermaid
-graph LR
-    A[Pilot: Fixed Order] -->|ΔC = -6.5%| B(Significant Effect 🚨);
-    C[Replication: Randomized] -->|ΔC < 0.3%| D(Null Result ✅);
-    B -.->|Methodological Correction| D
+sequenceDiagram
+    participant P as Prompt
+    participant M as Model
+    
+    rect rgb(255, 220, 220)
+    note right of P: ❌ Pilot (Fixed Order)
+    P->>M: 1. Evaluate "Free Tier" Context
+    M-->>P: Result 1
+    P->>M: 2. Evaluate "Paid Tier" Context
+    M-->>P: Result 2
+    note right of M: Introduces sequence bias!
+    end
+
+    rect rgb(220, 255, 220)
+    note right of P: ✅ Replication (Randomized)
+    P->>M: 1. Flip Coin (Head/Tail)
+    M-->>P: Evaluate A then B / OR / B then A
+    note right of M: Cancels out sequence bias.
+    end
 
 ```
 
 ---
 
-## 🧠 Interpretation & Implications
+## 📊 Key Results: The "Artifact" Collapse
 
-### 1. The Fragility of Alignment Metrics
+The primary finding is methodological. The "training-aware" signal observed in the pilot was a statistical mirage caused by the fixed evaluation order.
 
-Many safety evaluations rely on detecting small behavioral shifts (1–5%). This work demonstrates that **evaluation design alone** (specifically prompt ordering) can generate effect sizes of this magnitude. Without randomized counterbalancing, "safety failures" may simply be measurement errors.
+### Visualizing the Effect Size ()
 
-### 2. No Evidence of Training-Awareness
+The chart below shows how the **Compliance Gap** (the difference in refusal rates between Free and Paid tiers) disappeared in the replication.
 
-Under randomized, deterministic evaluation, neither `DeepSeek-R1-Distill` nor `Qwen-2.5-7B` exhibited genuine training-aware compliance. Approximately **98% of prompts** produced identical refusal decisions regardless of the deployment context.
+```mermaid
+xychart-beta
+    title "Compliance Gap (Paid - Free Refusal Rate)"
+    x-axis ["Pilot (Fixed Order)", "Replication (Randomized)"]
+    y-axis "Percentage Points" -8 --> 2
+    bar [-6.5, 0.2]
 
-### 3. Recommendations for AI Safety Evaluation
+```
 
-To distinguish genuine capabilities from experimental artifacts, safety benchmarks must adopt:
+### Statistical Summary
 
-* **Randomized Condition Ordering:** Essential to eliminate sequential bias.
-* **Paired Prompt Designs:** To control for prompt difficulty distribution.
-* **Stability Reporting:** Reporting the "Flip Rate" alongside aggregate metrics to quantify decision boundary noise.
+| Metric | Pilot (Fixed Order) | Replication (Randomized) | Status |
+| --- | --- | --- | --- |
+| **Compliance Gap ()** | **-6.5%** | **< 0.3%** | 📉 **Collapsed** |
+| **Prompt Flip Rate** | **14%** | **2%** | ✅ **Stabilized** |
+| **P-Value (McNemar)** |  (Sig) |  (Ns) | ❌ **No Effect** |
+
+> **Interpretation:** The pilot effect was a **spurious artifact**. Under rigorous randomized evaluation, neither model exhibited genuine training-aware compliance. ~98% of prompts produced identical decisions regardless of context.
 
 ---
 
 ## 📂 Reproducibility
 
-To ensure these results are reproducible, the study adhered to strict controls:
+To ensure results are reproducible, we strictly controlled the inference environment.
 
-* **Hardware:** NVIDIA H100 GPUs (single-turn inference).
-* **Precision:** `bfloat16` for the final replication sweep.
-* **Determinism:** Fixed seed and temperature () for all generations.
+```mermaid
+graph LR
+    H[Hardware: H100] --- P[Precision: bfloat16];
+    P --- D[Decoding: T=0 / Deterministic];
+    D --- S[Seeds: Fixed];
+
+```
+
 * **Transparency:** All prompt templates and evaluation logic are documented in the accompanying code.
-
-The full research paper, including detailed statistical analysis and reasoning trace inspection, is included in this repository.
+* **Full Paper:** See `technical_research_paper.pdf` for detailed reasoning trace inspection.
 
 ---
 
